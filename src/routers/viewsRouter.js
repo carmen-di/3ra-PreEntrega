@@ -15,6 +15,14 @@ viewsRouter.get('/', async (req, res) => {
     })
 })
 
+viewsRouter.get('/products', async (req, res) => {
+    res.render('products')
+})
+
+viewsRouter.get('/carts/:cid', async (req, res) => {
+    res.render('cart')
+})
+
 viewsRouter.get('/realtimeproducts', async (req, res) => {
     try {
         const productosDb = mongoose.connection.db.collection('products')

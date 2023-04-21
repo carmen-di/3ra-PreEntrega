@@ -1,43 +1,41 @@
 import { Router } from "express";
 import { Product } from "../entidades/Product.js"
 import { prod } from "../dao/mongo/managers/products.manager.js"
-import { randomUUID } from "crypto"
 
 export const productRouter = Router()
 
 productRouter.get('/', async (req, res, next) => {
-    try {
-        const limit = req.query.limit
-        const productos = await prod.getProducts()
+    const { limit, page, category, status, sort } = req.query
 
-        if (!limit) {
-            res.json(productos)
-        } else {
-            const productLimit = [];
-            for (let i = 0; i < limit && i < 10; i++) {
-                productLimit.push(productos[i])
-            }
-            res.json(productLimit);
+    try {
+        let product = await productosManager.read(page, limit, category, status, sort)
+
+        const productExist = () => {
+            if(Boolean(product.docs)) return "success"
+            else return "error"
         }
-    }
-    catch (error) {
+        res.send({
+            status: productExist(),
+            payload: product.docs,
+            totalDocs: product.totalDocs,
+            limit: product.limit,
+            totalPages: product.totalPages,
+            page: product.page,
+            pagingCounter: product.pagingCounter,
+            hasPrevPage: product.hasPrevPage,
+            hasNextPage: product.hasNextPage,
+            prevLink: product.prevPage,
+            nextLink: product.nextPage
+        })
+    } catch (error) {
         next(error)
-    }    
+    }
 })
 
 productRouter.get('/:pid', async (req, res, next) => {
     try {
-        const idProducto = req.params.pid
-        const poductosLeidos = await prod.getProducts()
-    
-        if (idProducto) {
-            let filtrado = poductosLeidos.find((prod) => prod.id === idProducto)
-            if (filtrado) {
-                res.send(filtrado)
-            } else {
-                throw new Error("no existe el id")
-            }
-        }
+        const idProducto = await prod.getProductById(req.params.pid)
+        res.json(idProducto)
     } 
     catch (error) {
         next(error)
@@ -46,9 +44,8 @@ productRouter.get('/:pid', async (req, res, next) => {
 
 productRouter.post('/', async (req, res, next) => {
     try {
-        await prod.getProducts()
-        const producto = new Product ({ ...req.body, id: randomUUID()})
-        const add = await prod.addProduct(producto.title, producto.description, producto.price, producto.thumbnail, producto.stock, producto.code, producto.category)
+        const producto = new Product (req.body)
+        const add = await prod.save(producto.datos())
         res.json(add)
     }
     catch (error) {
@@ -58,8 +55,10 @@ productRouter.post('/', async (req, res, next) => {
 
 productRouter.put('/:pid', async (req, res, next) => {
     try {
-        const prodUp = await prod.updateProduct(req.params.pid, req.body)
+        const producto = new Product (req.body)
+        const prodUp = await prod.updateProduct(req.params.pid, producto.datos())
         res.json(prodUp)
+        console.log(producto)
     }
     catch (error) {
         next(error)
